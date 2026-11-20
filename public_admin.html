@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="bn">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AMAR FOUND Admin</title>
+<style>body{font-family:system-ui;margin:24px;max-width:1100px}button{padding:8px 12px;margin:3px}input,select{padding:8px;margin:3px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.card{border:1px solid #ddd;padding:14px;border-radius:10px}.row{border-bottom:1px solid #ddd;padding:10px 0}</style>
+</head><body>
+<h1>AMAR FOUND Admin</h1>
+<p>এই controller server-side API-তে কাজ করে। প্রথমে আপনার Telegram admin ID দিন।</p>
+<input id="adminId" placeholder="Telegram Admin ID">
+<button onclick="load()">Load Dashboard</button>
+<div id="dash" class="grid"></div>
+<h2>Pending Deposits</h2><div id="deps"></div>
+<h2>Pending Withdrawals</h2><div id="wds"></div>
+<script>
+const api='/admin/api';
+function headers(){return {'Content-Type':'application/json','x-telegram-admin-id':document.getElementById('adminId').value}}
+async function get(p){const r=await fetch(api+p,{headers:headers()});return r.json()}
+async function post(p,b){const r=await fetch(api+p,{method:'POST',headers:headers(),body:JSON.stringify(b)});return r.json()}
+async function load(){
+ const d=await get('/dashboard');
+ document.getElementById('dash').innerHTML=Object.entries(d).map(([k,v])=>`<div class="card"><b>${k}</b><div>${v}</div></div>`).join('');
+ const deps=await get('/deposits');
+ document.getElementById('deps').innerHTML=deps.filter(x=>x.status==='pending').map(x=>`<div class="row"><b>${x.request_id}</b> — ${x.method} — ৳${x.amount} — @${x.username||'-'}<br><button onclick="review('deposits',${x.id},'approved')">Approve</button><button onclick="review('deposits',${x.id},'rejected')">Reject</button></div>`).join('');
+ const wds=await get('/withdrawals');
+ document.getElementById('wds').innerHTML=wds.filter(x=>x.status==='pending').map(x=>`<div class="row"><b>${x.request_id}</b> — ${x.method} — ${x.account_number} — ৳${x.amount}<br><button onclick="review('withdrawals',${x.id},'approved')">Approve</button><button onclick="review('withdrawals',${x.id},'rejected')">Reject</button></div>`).join('');
+}
+async function review(type,id,status){await post('/'+type+'/'+id+'/review',{status,note:''});await load()}
+</script>
+</body></html>
